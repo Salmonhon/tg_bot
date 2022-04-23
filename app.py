@@ -1,4 +1,7 @@
 import telebot
+import imaplib
+import email
+import traceback
 import os
 from flask_mail import  Message
 from db import User, File
@@ -9,20 +12,6 @@ random = random.randint(0,999999)
 
 bot = telebot.TeleBot("5141677130:AAG7DC7yQ9KSLzsMo9bL8Lph8B2vLiAcUzI")
 
-
-
-# from imap_tools import MailBox, AND
-#
-# # get email bodies from INBOX
-# with MailBox('imap.mail.com').login('is.salmonforsi@gmail.com', 'salmonhon.2003', 'INBOX') as mailbox:
-#     for msg in mailbox.fetch():
-#         body = msg.text or msg.html
-#         print(body)
-
-
-import imaplib
-import email
-import traceback
 # -------------------------------------------------
 #
 # Utility to read email from Gmail Using Python
@@ -52,13 +41,6 @@ def read_email_from_gmail():
                 arr = response_part[0]
                 if isinstance(arr, tuple):
                     msg = email.message_from_string(str(arr[1],'utf-8'))
-                    email_subject = msg['subject']
-                    email_from = msg['from']
-                    email_text = msg['text']
-                    # print("msg",msg)
-                    # print('From : ' + email_from + '\n')
-                    # print('Subject : ' + email_subject + '\n')
-                    # print('Text : ' + str(email_text) + '\n')
                     for i in msg.walk():
                         if i.get_content_maintype() == 'multipart':
                             continue
