@@ -1,20 +1,87 @@
 import telebot
 import os
-import docx
+from flask_mail import  Message
 from db import User, File
 from PyPDF2 import PdfFileReader
-from conf import app, db
-
+from conf import app, db, mail
+import random
+random = random.randint(0,999999)
 
 bot = telebot.TeleBot("5141677130:AAG7DC7yQ9KSLzsMo9bL8Lph8B2vLiAcUzI")
 
-def getText(filename):
-    doc = docx.opendocx(filename)
-    fullText = []
-    for para in doc.paragraphs:
-        fullText.append(para.text)
-    return fullText
-print(getText('2.docx'))
+
+
+# from imap_tools import MailBox, AND
+#
+# # get email bodies from INBOX
+# with MailBox('imap.mail.com').login('is.salmonforsi@gmail.com', 'salmonhon.2003', 'INBOX') as mailbox:
+#     for msg in mailbox.fetch():
+#         body = msg.text or msg.html
+#         print(body)
+
+
+import imaplib
+import email
+import traceback
+# -------------------------------------------------
+#
+# Utility to read email from Gmail Using Python
+#
+# ------------------------------------------------
+ORG_EMAIL = "@gmail.com"
+FROM_EMAIL = "medforum039" + ORG_EMAIL
+FROM_PWD = "plzmqtfxrrrcrftq"
+SMTP_SERVER = "imap.gmail.com"
+SMTP_PORT = 993
+
+def read_email_from_gmail():
+    try:
+        mail = imaplib.IMAP4_SSL(SMTP_SERVER)
+        mail.login(FROM_EMAIL,FROM_PWD)
+        mail.select('inbox')
+
+        data = mail.search(None, 'ALL')
+        mail_ids = data[1]
+        id_list = mail_ids[0].split()
+        first_email_id = int(id_list[0])
+        latest_email_id = int(id_list[-1])
+
+        for i in range(latest_email_id,first_email_id, -1):
+            data = mail.fetch(str(i), '(RFC822)' )
+            for response_part in data:
+                arr = response_part[0]
+                if isinstance(arr, tuple):
+                    msg = email.message_from_string(str(arr[1],'utf-8'))
+                    email_subject = msg['subject']
+                    email_from = msg['from']
+                    email_text = msg['text']
+                    # print("msg",msg)
+                    # print('From : ' + email_from + '\n')
+                    # print('Subject : ' + email_subject + '\n')
+                    # print('Text : ' + str(email_text) + '\n')
+                    for i in msg.walk():
+                        if i.get_content_maintype() == 'multipart':
+                            continue
+                        if i.get('Content-Disposition') is None:
+                            continue
+                        file = i.get_filename()
+
+                        if bool(file):
+
+                            filepath = os.path.join('files/', str(random)+file)
+                            if not os.path.isfile(filepath):
+                                fp=open(filepath,'wb')
+                                fp.write(i.get_payload(decode=True))
+                                fp.close()
+                                file = File(file_path=filepath, file_name=file)
+                                db.session.add(file)
+                                db.session.commit()
+
+    except Exception as e:
+        traceback.print_exc()
+        print(str(e))
+
+read_email_from_gmail()
 
 def pdf_reader(file):
     pdf_document = file
@@ -47,6 +114,12 @@ def start(message):
     author = User.query.filter_by(user_id=message.chat.id).first()
     if author:
         bot.send_message(message.chat.id, "Dont start again you are already registred", parse_mode='html')
+        with app.app_context():
+            msg = Message(subject="Hello",
+                          sender=app.config.get("MAIL_USERNAME"),
+                          recipients=["is.salmonforsi@gmail.com"],  # replace with your email for testing
+                          body="This is a test email I sent with Gmail and Python!")
+            mail.send(msg)
     else:
         name = f'Hello, <b>{message.from_user.first_name}</b> '
         bot.send_message(message.chat.id, name, parse_mode='html')
