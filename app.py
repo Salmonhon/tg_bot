@@ -5,24 +5,15 @@ from db import User, File
 from PyPDF2 import PdfFileReader
 from conf import app, db, mail
 import random
+import imaplib
+import email
+import traceback
+from os import listdir
+from os.path import isfile, join
 random = random.randint(0,999999)
 
 bot = telebot.TeleBot("5141677130:AAG7DC7yQ9KSLzsMo9bL8Lph8B2vLiAcUzI")
 
-
-
-# from imap_tools import MailBox, AND
-#
-# # get email bodies from INBOX
-# with MailBox('imap.mail.com').login('is.salmonforsi@gmail.com', 'salmonhon.2003', 'INBOX') as mailbox:
-#     for msg in mailbox.fetch():
-#         body = msg.text or msg.html
-#         print(body)
-
-
-import imaplib
-import email
-import traceback
 # -------------------------------------------------
 #
 # Utility to read email from Gmail Using Python
@@ -52,13 +43,6 @@ def read_email_from_gmail():
                 arr = response_part[0]
                 if isinstance(arr, tuple):
                     msg = email.message_from_string(str(arr[1],'utf-8'))
-                    email_subject = msg['subject']
-                    email_from = msg['from']
-                    email_text = msg['text']
-                    # print("msg",msg)
-                    # print('From : ' + email_from + '\n')
-                    # print('Subject : ' + email_subject + '\n')
-                    # print('Text : ' + str(email_text) + '\n')
                     for i in msg.walk():
                         if i.get_content_maintype() == 'multipart':
                             continue
@@ -74,13 +58,17 @@ def read_email_from_gmail():
                                 fp.write(i.get_payload(decode=True))
                                 fp.close()
                                 file = File(file_path=filepath, file_name=file)
-                                db.session.add(file)
-                                db.session.commit()
+                                try:
+                                    db.session.add(file)
+                                    db.session.commit()
+                                except:
+                                    print("This file already exist")
 
     except Exception as e:
         traceback.print_exc()
         print(str(e))
 
+read_email_from_gmail()
 read_email_from_gmail()
 
 def pdf_reader(file):
@@ -172,6 +160,21 @@ def handle_docs(message):
 @bot.message_handler(commands=['stop'])
 def handle_docs(message):
     bot.send_message(message.chat.id, "Goood ", parse_mode='html')
+
+
+
+
+@bot.message_handler(commands=['all'])
+def show_all(message):
+    file_path = "files/"
+
+    bot.send_message(message.chat.id, "All file what we have on database", parse_mode='html')
+    bot.send_message(message.chat.id, "Please wait end of process", parse_mode='html')
+    for name in os.listdir('files'):
+
+        file = open(file_path+name, 'rb')
+        bot.send_document(message.chat.id, file)
+    bot.send_message(message.chat.id, "Process is ended", parse_mode='html')
 
 
 # @bot.message_handler(commands=['read'])
