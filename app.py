@@ -9,7 +9,7 @@ import imaplib
 import email
 import traceback
 from telebot import types
-
+from fuzzywuzzy import fuzz, process
 
 random = random.randint(0,999999)
 
@@ -62,10 +62,11 @@ def read_email_from_gmail(message):
                                    flag = False
                                 else:
 
-                                    fp=open(filepath,'wb')
+                                    fp = open(filepath,'wb')
                                     fp.write(i.get_payload(decode=True))
                                     fp.close()
-                                    file = File(file_path=filepath, file_name=file)
+                                    text = reader(file,filepath)
+                                    file = File(file_path=filepath, file_name=file, main_text=text, user_id="1")
                                     db.session.add(file)
                                     db.session.commit()
                                     flag = True
@@ -83,25 +84,28 @@ def pdf_reader(file):
     pdf_document = file
     with open(pdf_document, "rb") as filehandle:
         pdf = PdfFileReader(filehandle)
-
-        info = pdf.getDocumentInfo()
-        pages = pdf.getNumPages()
-        print("Количество страниц в документе: %i\n\n" % pages)
-        print("Мета-описание: ", info)
-
-        for i in range(pages):
+        for i in range(1):
             page = pdf.getPage(i)
-            print(page.extractText())
+            text = page.extractText()
+            f = open("first_pages/{}.txt".format(random), "w+")
+            f.write(text)
+
+    return f.name
 
 
-def reader(file):
-    file_name, file_extension = os.path.splitext(file.file_name)
+
+
+
+def reader(file , file_path):
+    file_name, file_extension = os.path.splitext(file)
     if file_extension == '.pdf':
-        pdf_reader(file)
+        return pdf_reader(file_path)
     elif file_extension == '.txt':
-        pass
-
-
+        return "TXT file"
+    elif file_extension == ".docx":
+        return "for word file it will be paid"
+    else:
+        return "Dont get this type of file"
 @bot.message_handler(commands=['start'])
 @app.before_first_request
 def start(message):
@@ -146,8 +150,17 @@ def handle_docs(message):
         db.session.commit()
 
 
-
-
+def full_text_search(source, input):
+    try:
+        with open(source, 'r') as f:
+            f = f.read().split()
+            result = process.extract(input, f, limit=1)
+            print("Source-",source)
+            print(result)
+        return result
+    except:
+        result = [(0, 0)]
+        return result
 @bot.message_handler(commands=['search'])
 def handle_docs(message):
     bot.send_message(message.chat.id, "Write your file name ", parse_mode='html')
@@ -155,12 +168,25 @@ def handle_docs(message):
         @bot.message_handler(content_types=['text'])
         def handle_docs(message):
             file_name = File.query.filter_by(file_name=message.text).first()
-            # file_name = File.query.filter(...).msearch(message.text,fields=['file_name'],limit=20).filter(...)
+
             if file_name:
 
                 file = open(file_name.file_path, 'rb')
                 bot.send_message(message.chat.id, file_name.date, parse_mode='html')
                 bot.send_document(message.chat.id, file)
+            elif not file_name:
+                files = User.query.filter_by(id="1").first()
+                for i in files.author_files:
+                    searched = fuzz.token_sort_ratio(i.file_name, message.text)
+                    print(searched)
+                    if searched > 50:
+                        file = open(i.file_path, 'rb')
+                        bot.send_document(message.chat.id, file)
+                    # else:
+                    #     score = full_text_search(i.main_text, message.text)
+                    #     if score[0][1]>50:
+                    #         file = open(i.file_path, 'rb')
+                    #         bot.send_document(message.chat.id, file)
 
             else:
                 bot.send_message(message.chat.id, "<b>Failed dont have this file</b>", parse_mode='html')
