@@ -20,11 +20,13 @@ bot = telebot.TeleBot("5141677130:AAG7DC7yQ9KSLzsMo9bL8Lph8B2vLiAcUzI")
 # Utility to read email from Gmail Using Python
 #
 # ------------------------------------------------
+# there you define your email
 ORG_EMAIL = "@gmail.com"
 FROM_EMAIL = "medforum039" + ORG_EMAIL
 FROM_PWD = "plzmqtfxrrrcrftq"
 SMTP_SERVER = "imap.gmail.com"
 SMTP_PORT = 993
+# this method for getting files from email
 @bot.message_handler(commands=['refresh'])
 def read_email_from_gmail(message):
     try:
@@ -79,7 +81,7 @@ def read_email_from_gmail(message):
         print(str(e))
 
 
-
+#method for reading pdf 
 def pdf_reader(file):
     pdf_document = file
     with open(pdf_document, "rb") as filehandle:
@@ -94,7 +96,7 @@ def pdf_reader(file):
 
 
 
-
+#method for definding type of file u should improve it ))
 
 def reader(file , file_path):
     file_name, file_extension = os.path.splitext(file)
@@ -149,7 +151,7 @@ def handle_docs(message):
         db.session.add(file)
         db.session.commit()
 
-
+#method for searching from first pages 
 def full_text_search(source, input):
     try:
         with open(source, 'r') as f:
@@ -182,6 +184,7 @@ def handle_docs(message):
                     if searched > 50:
                         file = open(i.file_path, 'rb')
                         bot.send_document(message.chat.id, file)
+                    # if u uncommit this code u can use search in first pages but thereis some bug please fix it by yourself )) i dont have time 
                     # else:
                     #     score = full_text_search(i.main_text, message.text)
                     #     if score[0][1]>50:
@@ -211,30 +214,6 @@ def show_all(message):
         bot.send_document(message.chat.id, file)
     bot.send_message(message.chat.id, "Process is ended", parse_mode='html')
 
-
-# @bot.message_handler(commands=['read'])
-# def handle_docs(message):
-#     bot.send_message(message.chat.id, "Write your file name ", parse_mode='html')
-#     if 'read':
-#         @bot.message_handler(content_types=['text'])
-#         def handle_docs(message):
-#             file_name = File.query.filter_by(file_name=message.text).first()
-#             if file_name:
-#                 pdf_document = file_name.file_path
-#                 with open(pdf_document, "rb") as filehandle:
-#                     pdf = PdfFileReader(filehandle)
-#
-#                     info = pdf.getDocumentInfo()
-#                     pages = pdf.getNumPages()
-#                     bot.send_message(message.chat.id, 'Number of pages '+str(pages), parse_mode='html')
-#
-#
-#                     for i in range(pages):
-#                         page = pdf.getPage(i)
-#                         bot.send_message(message.chat.id, page.extractText(), parse_mode='html')
-#
-#             else:
-#                 bot.send_message(message.chat.id, "<b>Failed dont have this file</b>", parse_mode='html')
 
 
 bot.polling(none_stop=True)
